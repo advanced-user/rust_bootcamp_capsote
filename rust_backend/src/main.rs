@@ -4,6 +4,7 @@ use lobby::Lobby;
 mod game;
 mod messages;
 mod start_connection;
+mod errors;
 
 use actix::Actor;
 use start_connection::start_connection as start_connection_route;

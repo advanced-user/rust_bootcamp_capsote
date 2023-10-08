@@ -74,11 +74,16 @@ impl Handler<Connect> for Lobby {
                 }
             }
         } else {
-            self.games
+            match self.games
                 .entry(msg.game_id)
                 .or_insert_with(|| Game::new())
-                .add_player(msg.self_id)
-                .expect("Failed to add player to the game");
+                .add_player(msg.self_id) {
+                Ok(_) => {}
+                Err(err) => {
+                    let _ = msg.addr.do_send(WsMessage(err.message));
+                    return;
+                }
+            }
         }
 
         self.games_users_ids
@@ -105,11 +110,13 @@ impl Handler<ClientActorMessage> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: ClientActorMessage, _ctx: &mut Context<Self>) -> Self::Result {
-        println!("Lobby");
         let game = self.games.get_mut(&msg.game_id).unwrap();
-        game.handle_msg(&msg);
+        let response;
 
-        let response = serde_json::to_string(&game).unwrap();
+        match game.handle_msg(&msg) {
+            Ok(_) => response = serde_json::to_string(&game).unwrap(),
+            Err(err) => response = err.message,
+        }
 
         self.games_users_ids
             .get(&msg.game_id)

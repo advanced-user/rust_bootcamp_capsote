@@ -2,6 +2,7 @@ use crate::messages::{ClientActorMessage, Msg};
 use std::collections::HashMap;
 use serde::{Serialize};
 use uuid::Uuid;
+use crate::errors::{AppError, AppErrorType};
 
 const START_LEFT_POSITION: PlayerPosition = PlayerPosition { y: 5f64, x: 20f64 };
 const START_RIGHT_POSITION: PlayerPosition = PlayerPosition { y: 5f64, x: 300f64 };
@@ -50,7 +51,7 @@ impl Player {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 #[derive(Serialize)]
 enum GameState {
     NotStarted,
@@ -80,9 +81,31 @@ impl Game {
         }
     }
 
-    pub fn add_player(&mut self, player_id: Uuid) -> Result<(), ()> {
+    fn get_player_mut(&mut self, player_id: &Uuid) -> Result<&mut Player, AppError> {
+        if let Some(player) =  self.players.get_mut(player_id) {
+            Ok(player)
+        } else {
+            return Err(AppError {
+                message: "Player not found".to_string(),
+                error_type: AppErrorType::PlayerNotFoundError,
+            })
+        }
+    }
+
+    fn get_player(&self, player_id: &Uuid) -> Result<&Player, AppError> {
+        if let Some(player) =  self.players.get(player_id) {
+            Ok(player)
+        } else {
+            return Err(AppError {
+                message: "Player not found".to_string(),
+                error_type: AppErrorType::PlayerNotFoundError,
+            })
+        }
+    }
+
+    pub fn add_player(&mut self, player_id: Uuid) -> Result<(), AppError> {
         if self.players.len() >= 2 {
-            return Err(());
+            return Err(AppError { message: "The number of players cannot exceed 2".to_string(), error_type: AppErrorType::NumberOfPlayersError });
         }
 
         let player_position = if self.players.len() == 0 {
@@ -113,54 +136,67 @@ impl Game {
         Ok(())
     }
 
-    pub fn handle_msg(&mut self, msg: &ClientActorMessage) {
+    pub fn handle_msg(&mut self, msg: &ClientActorMessage) -> Result<(), AppError> {
         if self.state == GameState::GameOver || self.state == GameState::NotStarted {
-            return;
+            return Err(AppError {
+                message: format!("Game state is {:?}", self.state),
+                error_type: AppErrorType::GameStateError,
+            });
         }
 
-        let opponent_id = self.get_opponent_id(&msg.id);
+        let opponent_id = self.get_opponent_id(&msg.id)?;
         match msg.msg {
-            Msg::Hit => self.handle_attack(&msg.id, &opponent_id),
+            Msg::Hit => self.handle_attack(&msg.id, &opponent_id)?,
             Msg::Wait => {},
-            _ => self.handle_movement(&msg.id, &msg.msg),
+            _ => self.handle_movement(&msg.id, &msg.msg)?,
         }
+
+        Ok(())
     }
 
-    fn get_opponent_id(&self, player_id: &Uuid) -> Uuid {
+    fn get_opponent_id(&self, player_id: &Uuid) -> Result<Uuid, AppError> {
         for (uuid, _) in &self.players {
             if uuid != player_id {
-                return uuid.clone();
+                return Ok(uuid.clone());
             }
         }
 
-        panic!("Player not found")
+        Err(AppError {
+            message: "Opponent player not found".to_string(),
+            error_type: AppErrorType::PlayerNotFoundError,
+        })
     }
 
-    pub fn handle_movement(&mut self, player_id: &Uuid, direction: &Msg) {
-        let player = self.players.get_mut(player_id).expect("Player not found");
+    pub fn handle_movement(&mut self, player_id: &Uuid, direction: &Msg) -> Result<(), AppError> {
+        let player = self.get_player_mut(player_id)?;
+
         if direction == &Msg::Left {
             player.go_left();
         } else {
             player.go_right();
         }
+
+        Ok(())
     }
 
-    pub fn handle_attack(&mut self, attacker_id: &Uuid, def_id: &Uuid) {
-        if self.in_attack_zone(attacker_id, def_id) {
-            let attacker = self.players.get(attacker_id).expect("Player not found");
+    pub fn handle_attack(&mut self, attacker_id: &Uuid, def_id: &Uuid) -> Result<(), AppError> {
+        if self.in_attack_zone(attacker_id, def_id)? {
+            let attacker = self.get_player(attacker_id)?;
             let damage = attacker.damage;
-            let def_player = self.players.get_mut(def_id).expect("Player not found");
+            let def_player = self.get_player_mut(def_id)?;
             def_player.take_damage(damage);
             if !def_player.is_alive() {
                 self.state = GameState::GameOver;
                 self.winner = Winner::Id(attacker_id.clone());
             }
         }
+
+        Ok(())
     }
 
-    fn in_attack_zone(&self, attacker_id: &Uuid, def_id: &Uuid) -> bool {
-        let attacker = self.players.get(attacker_id).expect("Player not found");
-        let def_player = self.players.get(def_id).expect("Player not found");
+    fn in_attack_zone(&self, attacker_id: &Uuid, def_id: &Uuid) -> Result<bool, AppError> {
+        let attacker = self.get_player(attacker_id)?;
+        let def_player = self.get_player(def_id)?;
 
         let body_radius = def_player.body.width as f64 / 2f64;
         let left_border = def_player.position.x - body_radius;
@@ -170,11 +206,11 @@ impl Game {
         let right_attack_zone = attacker.position.x + attacker.attack_zone as f64;
 
         return if self.in_range(&right_attack_zone, &left_border, &right_border) {
-            true
+            Ok(true)
         } else if self.in_range(&left_attack_zone, &left_border, &right_border) {
-            true
+            Ok(true)
         } else {
-            false
+            Ok(false)
         };
     }
 

@@ -1,6 +1,5 @@
-use std::str::FromStr;
 use crate::lobby::Lobby;
-use crate::messages::{ClientActorMessage, Connect, Disconnect, Msg, WsMessage};
+use crate::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
 use actix::{fut, ActorContext, ActorFutureExt, ContextFutureSpawner, WrapFuture};
 use actix::{Actor, Addr, Running, StreamHandler};
 use actix::{AsyncContext, Handler};
