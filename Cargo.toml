@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "rust_backend",
-    "rust_bevy"
+    "rust_cli"
 ]

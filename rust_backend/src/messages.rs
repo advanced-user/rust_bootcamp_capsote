@@ -41,12 +41,20 @@ impl FromStr for Msg {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
+        let mut chars = s.chars();
+        chars.next();
+        chars.next_back();
+
+        let msg_str= chars.as_str();
+
+        match msg_str {
             "Left" => Ok(Msg::Left),
             "Right" => Ok(Msg::Right),
             "Hit" => Ok(Msg::Hit),
             "Wait" => Ok(Msg::Wait),
-            _ => Err(()),
+            _ => {
+                Err(())
+            },
         }
     }
 }

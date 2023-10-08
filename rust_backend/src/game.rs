@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use serde::{Serialize};
 use uuid::Uuid;
 
-const START_LEFT_POSITION: PlayerPosition = PlayerPosition { y: 0f64, x: 2f64 };
-const START_RIGHT_POSITION: PlayerPosition = PlayerPosition { y: 0f64, x: 2f64 };
+const START_LEFT_POSITION: PlayerPosition = PlayerPosition { y: 5f64, x: 20f64 };
+const START_RIGHT_POSITION: PlayerPosition = PlayerPosition { y: 5f64, x: 300f64 };
 
 #[derive(Serialize)]
 pub struct PlayerPosition {
@@ -93,13 +93,13 @@ impl Game {
 
         // In the future we will load from the database
         let new_player = Player {
-            health: 0,
-            speed: 0f64,
-            damage: 0,
-            attack_zone: 0,
+            health: 1000,
+            speed: 40f64,
+            damage: 100,
+            attack_zone: 30,
             body: PlayerBody {
-                height: 0,
-                width: 0,
+                height: 10,
+                width: 5,
             },
             position: player_position,
         };
@@ -133,7 +133,7 @@ impl Game {
             }
         }
 
-        panic!("")
+        panic!("Player not found")
     }
 
     pub fn handle_movement(&mut self, player_id: &Uuid, direction: &Msg) {

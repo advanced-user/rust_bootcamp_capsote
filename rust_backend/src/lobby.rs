@@ -105,6 +105,7 @@ impl Handler<ClientActorMessage> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: ClientActorMessage, _ctx: &mut Context<Self>) -> Self::Result {
+        println!("Lobby");
         let game = self.games.get_mut(&msg.game_id).unwrap();
         game.handle_msg(&msg);
 

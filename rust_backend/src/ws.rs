@@ -1,5 +1,6 @@
+use std::str::FromStr;
 use crate::lobby::Lobby;
-use crate::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+use crate::messages::{ClientActorMessage, Connect, Disconnect, Msg, WsMessage};
 use actix::{fut, ActorContext, ActorFutureExt, ContextFutureSpawner, WrapFuture};
 use actix::{Actor, Addr, Running, StreamHandler};
 use actix::{AsyncContext, Handler};
@@ -88,6 +89,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
             }
             Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
             Ok(ws::Message::Close(reason)) => {
+                println!("Connection closed: {:?}", reason);
+
                 ctx.close(reason);
                 ctx.stop();
             }
@@ -96,10 +99,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
             }
             Ok(ws::Message::Nop) => (),
             Ok(Text(s)) => self.lobby_addr.do_send(ClientActorMessage {
-                id: self.id,
-                msg: s.parse().unwrap(),
-                game_id: self.game_id,
-            }),
+                    id: self.id,
+                    msg: s.parse().unwrap(),
+                    game_id: self.game_id}
+            ),
             Err(e) => std::panic::panic_any(e),
         }
     }
