@@ -1,5 +1,5 @@
 use crate::lobby::Lobby;
-use crate::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+use crate::messages::{ClientActorMessage, Connect, Disconnect, IncorrectClientActorMessage, WsMessage};
 use actix::{fut, ActorContext, ActorFutureExt, ContextFutureSpawner, WrapFuture};
 use actix::{Actor, Addr, Running, StreamHandler};
 use actix::{AsyncContext, Handler};
@@ -97,11 +97,20 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
                 ctx.stop();
             }
             Ok(ws::Message::Nop) => (),
-            Ok(Text(s)) => self.lobby_addr.do_send(ClientActorMessage {
+            Ok(Text(s)) => {
+                if let Ok(msg) = s.parse() {
+                    self.lobby_addr.do_send(ClientActorMessage {
+                        id: self.id,
+                        msg,
+                        game_id: self.game_id
+                    });
+                    return;
+                }
+                self.lobby_addr.do_send(IncorrectClientActorMessage {
                     id: self.id,
-                    msg: s.parse().unwrap(),
-                    game_id: self.game_id}
-            ),
+                    msg: s.to_string(),
+                })
+            },
             Err(e) => std::panic::panic_any(e),
         }
     }

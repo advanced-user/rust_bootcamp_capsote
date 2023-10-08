@@ -29,6 +29,13 @@ pub struct ClientActorMessage {
     pub game_id: Uuid,
 }
 
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct IncorrectClientActorMessage {
+    pub msg: String,
+    pub id: Uuid,
+}
+
 #[derive(PartialEq)]
 pub enum Msg {
     Left,  // The player moves the character one unit to the left

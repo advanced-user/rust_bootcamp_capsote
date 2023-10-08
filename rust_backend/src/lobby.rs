@@ -1,4 +1,4 @@
-use crate::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+use crate::messages::{ClientActorMessage, Connect, Disconnect, IncorrectClientActorMessage, WsMessage};
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -123,5 +123,14 @@ impl Handler<ClientActorMessage> for Lobby {
             .unwrap()
             .iter()
             .for_each(|client| self.send_message(&response, client));
+    }
+}
+
+impl Handler<IncorrectClientActorMessage> for Lobby {
+    type Result = ();
+
+    fn handle(&mut self, msg: IncorrectClientActorMessage, _ctx: &mut Context<Self>) -> Self::Result {
+        let response = format!("Message {} is incorrect", msg.msg);
+        self.send_message(&response, &msg.id);
     }
 }
